@@ -35,9 +35,6 @@ public class Table implements Run {
                     double duration = Util.mills2Second(startTime);
                     System.out.println("complete | " + duration + "s");
                     break;
-                default:
-                    System.out.println("unexpected task: " + properties.get("task"));
-                    System.exit(1);
             }
 
         }

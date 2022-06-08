@@ -55,6 +55,7 @@ class RunFactory {
             case "replace":
                 return new Replace();
             case "tidb":
+            case "explain":
             case "explain_analyze":
                 return new TiDBBench();
             case "tispark":

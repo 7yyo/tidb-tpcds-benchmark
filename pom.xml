@@ -35,13 +35,19 @@
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.29</version>
+            <version>8.0.28</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/com.jakewharton.fliptables/fliptables -->
         <dependency>
             <groupId>com.jakewharton.fliptables</groupId>
             <artifactId>fliptables</artifactId>
             <version>1.1.0</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.11.0</version>
         </dependency>
         <!--        <dependency>-->
 <!--            <groupId>com.pingcap.tispark</groupId>-->

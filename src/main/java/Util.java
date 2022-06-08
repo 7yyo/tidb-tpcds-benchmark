@@ -1,14 +1,40 @@
 import com.jakewharton.fliptables.FlipTable;
 
+import java.io.File;
+
 public class Util {
 
     public static double mills2Second(long startTime) {
         return Math.round(System.currentTimeMillis() - startTime) / 1000.0;
     }
 
-    public static String explainAnalyzeTable(String[][] rows) {
-        String[] header = new String[]{"id", "estRows", "actRows", "task", "access object", "execution info", "operator info", "memory", "disk"};
-        return FlipTable.of(header, rows);
+    public static File createFolder(String folderPath) {
+        File folder = new File(folderPath);
+        if (!folder.mkdir()) {
+            System.out.println("create folder " + folder.getAbsolutePath() + " failed");
+            System.exit(1);
+        }
+        return folder;
+    }
+
+    public static void deleteFolder(String folderPath) {
+        File deleteFolder = new File(folderPath);
+        File[] fileList = deleteFolder.listFiles();
+        if (fileList == null) {
+            return;
+        }
+        for (File file : fileList) {
+            if (!file.isDirectory()) {
+                if (!file.delete()) {
+                    System.out.println("delete file " + file.getAbsolutePath() + " failed");
+                }
+            } else {
+                deleteFolder(file.getAbsolutePath());
+            }
+        }
+        if (!deleteFolder.delete()) {
+            System.out.println("delete folder " + deleteFolder.getAbsolutePath() + " failed");
+        }
     }
 
 }
