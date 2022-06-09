@@ -4,6 +4,5 @@ import java.util.Properties;
 
 public interface Run {
 
-    void run(Source source, Map<String, String> properties);
-
+  void run(Source source, Map<String, String> properties);
 }
