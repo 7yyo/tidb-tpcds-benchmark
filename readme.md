@@ -5,9 +5,8 @@
 1. 运行 tpc-ds SQL
 2. 查询 tpc-ds 所有表的数据量
 3. analyze 所有表
-4. explain 所有 SQL 并输出文件
-5. explain analyze 所有 SQL 并输出文件
-6. 将 tpc-ds 生成数据的文件名修改为 tidb-lightning 支持格式，方便做数据导入
+4. explain analyze 所有 SQL 并输出文件
+5. 将 tpc-ds 生成数据的文件名修改为 tidb-lightning 支持格式，方便做数据导入
 
 ## 参数
 ```properties
@@ -22,12 +21,11 @@ variables=\
 
 # tpc-ds query 文件路径
 file=/Users/yuyang/Desktop/sql 
-# 任务类型，以下参数对应上面提到的六个功能:
+# job 类型，以下参数对应上面提到的六个功能:
 # tidb
 # row
-# annalyze
-# explain
+# analyze
 # explain_analyze
 # replace
-task=explain_analyze 
+job=explain_analyze 
 ```

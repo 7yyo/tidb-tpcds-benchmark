@@ -89,9 +89,7 @@ public class TiDB implements Run {
       try {
 
         System.out.print(f.getName());
-        if ("explain".equals(job)) {
-          sql.insert(0, "explain ");
-        } else if ("explain_analyze".equals(job)) {
+        if ("explain_analyze".equals(job)) {
           sql.insert(0, "explain analyze ");
         }
 
@@ -116,17 +114,6 @@ public class TiDB implements Run {
               rows++;
             }
             System.out.println(rows);
-            break;
-          case "explain":
-            Explain e = new Explain();
-            file =
-                new File(
-                    Objects.requireNonNull(explainFolder).getAbsolutePath()
-                        + "/"
-                        + f.getName()
-                        + ".sql");
-            FileUtils.write(file, sql.append("\n"), "utf-8");
-            FileUtils.write(file, e.explainTable(rs), "utf-8");
             break;
           case "explain_analyze":
             ExplainAnalyze ea = new ExplainAnalyze();
@@ -191,7 +178,7 @@ public class TiDB implements Run {
   }
 
   public static boolean isExplainAnalyze(String job) {
-    return "explain".equals(job) || "explain_analyze".equals(job);
+    return "explain_analyze".equals(job);
   }
 
   public boolean shouldSkipQuery(File queryFile) {
@@ -202,36 +189,6 @@ public class TiDB implements Run {
       }
     }
     return false;
-  }
-}
-
-@Data
-class Explain {
-
-  private static final String[] header =
-      new String[] {"id", "estRows", "task", "access object", "operator info"};
-  private static final String[][] rows = new String[1][5];
-  private StringBuilder id = new StringBuilder();
-  private StringBuilder estRows = new StringBuilder();
-  private StringBuilder task = new StringBuilder();
-  private StringBuilder accessObject = new StringBuilder();
-  private StringBuilder operatorInfo = new StringBuilder();
-
-  @SneakyThrows
-  public String explainTable(ResultSet rs) {
-    while (rs.next()) {
-      id.append(rs.getString(1)).append("\n");
-      estRows.append(rs.getString(2)).append("\n");
-      task.append(rs.getString(3)).append("\n");
-      accessObject.append(rs.getString(4)).append("\n");
-      operatorInfo.append(rs.getString(5)).append("\n");
-    }
-    rows[0][0] = id.toString();
-    rows[0][1] = estRows.toString();
-    rows[0][2] = task.toString();
-    rows[0][3] = accessObject.toString();
-    rows[0][4] = operatorInfo.toString();
-    return FlipTable.of(header, rows);
   }
 }
 

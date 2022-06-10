@@ -34,7 +34,7 @@ public class Main {
       if ("variables".equals(k)) {
         System.out.println("variables = ");
         for (String variable : v.split(";")) {
-          System.out.println("    " + variable);
+          System.out.println("\t" + variable);
         }
       } else {
         System.out.println(k + ": " + v);
@@ -55,11 +55,10 @@ class RunFactory {
       case "replace":
         return new Replace(source);
       case "tidb":
-      case "explain":
       case "explain_analyze":
         return new TiDB(source);
       case "tispark":
-        return new TiSpark();
+        return new TiSpark(source);
       default:
         return null;
     }

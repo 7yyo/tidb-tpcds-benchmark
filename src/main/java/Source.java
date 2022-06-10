@@ -31,7 +31,6 @@ public class Source {
 
     switch (job) {
       case "tidb":
-      case "explain":
       case "explain_analyze":
         if (h == null || u == null || p == null || db == null || v == null || f == null) {
           System.out.println("`host`, `user`, `password`, `db`, `variables`, `file` must be set");
