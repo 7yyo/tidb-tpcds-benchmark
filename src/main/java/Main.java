@@ -12,12 +12,12 @@ import java.util.Properties;
 public class Main {
 
   public static void main(String[] args) {
-    if (System.getProperty("f") == null) {
+    if (System.getProperty("f") == null)
       System.setProperty("f", "src/main/resources/tpcds.properties");
-    }
+
     Map<String, String> properties = loadProperties(System.getProperty("f"));
     Source source = new Source(properties);
-    Objects.requireNonNull(RunFactory.getRun(properties.get("task"))).run(source, properties);
+    Objects.requireNonNull(RunFactory.getRun(source)).run();
   }
 
   @SneakyThrows
@@ -47,17 +47,17 @@ public class Main {
 
 class RunFactory {
 
-  public static Run getRun(String k) {
-    switch (k) {
+  public static Run getRun(Source source) {
+    switch (source.getJob()) {
       case "row":
       case "analyze":
-        return new Table();
+        return new Table(source);
       case "replace":
-        return new Replace();
+        return new Replace(source);
       case "tidb":
       case "explain":
       case "explain_analyze":
-        return new TiDB();
+        return new TiDB(source);
       case "tispark":
         return new TiSpark();
       default:

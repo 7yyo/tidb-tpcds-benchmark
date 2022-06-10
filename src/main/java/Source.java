@@ -5,7 +5,7 @@ import java.util.Map;
 @Data
 public class Source {
 
-  private String k;
+  private String job;
 
   private String host;
   private String user;
@@ -17,6 +17,7 @@ public class Source {
   private String master;
 
   public Source(Map<String, String> properties) {
+
     String h = properties.get("host");
     String u = properties.get("user");
     String p = properties.get("password");
@@ -25,9 +26,10 @@ public class Source {
     String f = properties.get("file");
     String pd = properties.get("pd");
     String master = properties.get("master");
-    String task = properties.get("task");
+    String job = properties.get("job");
+    this.job = job;
 
-    switch (task) {
+    switch (job) {
       case "tidb":
       case "explain":
       case "explain_analyze":
@@ -35,12 +37,12 @@ public class Source {
           System.out.println("`host`, `user`, `password`, `db`, `variables`, `file` must be set");
           System.exit(1);
         }
-        this.host = h;
-        this.user = u;
-        this.password = p;
+        host = h;
+        user = u;
+        password = p;
         this.db = db;
-        this.variables = v;
-        this.folderPath = f;
+        variables = v;
+        folderPath = f;
         break;
       case "row":
       case "analyze":
@@ -48,9 +50,9 @@ public class Source {
           System.out.println("host`, `user`, `password`, `db` must be set");
           System.exit(1);
         }
-        this.host = h;
-        this.user = u;
-        this.password = p;
+        host = h;
+        user = u;
+        password = p;
         this.db = db;
         break;
       case "tispark":
@@ -59,10 +61,10 @@ public class Source {
           System.exit(1);
         }
         this.pd = pd;
-        this.user = u;
-        this.password = p;
+        user = u;
+        password = p;
         this.db = db;
-        this.folderPath = f;
+        folderPath = f;
         this.master = master;
         break;
       case "replace":
@@ -70,16 +72,16 @@ public class Source {
           System.out.println("`file`, `db` must be set");
           System.exit(1);
         }
-        this.folderPath = f;
+        folderPath = f;
         this.db = db;
         break;
       default:
-        System.out.println("unexpected task: " + k);
+        System.out.println("unexpected task: " + job);
         System.exit(1);
     }
   }
 
   public String JDBCUrl() {
-    return "jdbc:mysql://" + this.getHost() + "/" + this.getDb();
+    return "jdbc:mysql://" + this.host + "/" + this.db;
   }
 }

@@ -1,3 +1,4 @@
+import lombok.Data;
 import lombok.SneakyThrows;
 
 import java.sql.Connection;
@@ -8,20 +9,35 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Data
 public class Table implements Run {
 
+  private String job;
+
+  private Connection conn;
+  private Statement sm;
+  private ResultSet rs;
+
+  private String db;
+
   @SneakyThrows
-  public void run(Source source, Map<String, String> properties) {
-    String url = source.JDBCUrl();
-    Connection conn = DriverManager.getConnection(url, source.getUser(), source.getPassword());
-    Statement sm = conn.createStatement();
+  public Table(Source source) {
+    job = source.getJob();
+    Class.forName("com.mysql.cj.jdbc.Driver");
+    conn = DriverManager.getConnection(source.JDBCUrl(), source.getUser(), source.getPassword());
+    sm = conn.createStatement();
+    db = source.getDb();
+  }
+
+  @SneakyThrows
+  public void run() {
     ResultSet rs = sm.executeQuery("show tables");
     List<String> tables = new ArrayList<>();
     while (rs.next()) {
-      tables.add(rs.getString("Tables_in_" + source.getDb()));
+      tables.add(rs.getString("Tables_in_" + db));
     }
     for (String table : tables) {
-      switch (properties.get("task")) {
+      switch (job) {
         case "row":
           rs = sm.executeQuery("select count(*) from " + table);
           while (rs.next()) {

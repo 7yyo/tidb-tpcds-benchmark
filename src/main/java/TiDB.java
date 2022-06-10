@@ -13,15 +13,34 @@ import java.sql.Statement;
 import java.util.*;
 import java.util.stream.Stream;
 
+@Data
 public class TiDB implements Run {
 
+  private String job;
+
+  private String db;
+  private Connection conn;
+  private Statement sm;
+  private ResultSet rs;
+
+  private StringBuilder sql = new StringBuilder();
+  private static Map<String, String> skipQueries = new HashMap<>();
+  private String queryFolderPath;
+  private File[] queryFiles;
+
+  private String[] variables;
+
+  private int success = 0;
+  private int failed = 0;
+  private List<String> failedQueries = new ArrayList<>();
+  private double totalDuration = 0;
+
   @SneakyThrows
-  public void run(Source source, Map<String, String> properties) {
-
-    String t = properties.get("task");
-
+  public TiDB(Source source) {
+    job = source.getJob();
+    db = source.getDb();
     Class.forName("com.mysql.cj.jdbc.Driver");
-    Connection conn =
+    conn =
         DriverManager.getConnection(
             "jdbc:mysql://"
                 + source.getHost()
@@ -30,73 +49,67 @@ public class TiDB implements Run {
                 + "?autoReconnect=true&maxReconnects=99999",
             source.getUser(),
             source.getPassword());
-    Statement sm = conn.createStatement();
-    ResultSet rs = null;
-    executeVariables(sm, source);
+    sm = conn.createStatement();
+    variables = source.getVariables().split(";");
+    setVariables();
+    queryFolderPath = source.getFolderPath();
+    queryFiles = Util.sortFolder(source.getFolderPath());
+    skipQueries();
+  }
 
-    double totalDuration = 0;
-    int success = 0;
-    int failed = 0;
-    List<String> errors = new ArrayList<>();
+  @SneakyThrows
+  public void run() {
 
     File explainFolder = null;
-    if ("explain".equals(t) || "explain_analyze".equals(t)) {
-      String parentFile = new File(properties.get("file")).getParent();
-      Util.deleteFolder(parentFile + "/" + t + "_" + source.getDb());
-      explainFolder = Util.createFolder(parentFile + "/" + t + "_" + source.getDb());
+    if (isExplainAnalyze(job)) {
+      String parentFolderPath = new File(queryFolderPath).getParent();
+      String targetFolderPath = parentFolderPath + "/" + job + "_" + db;
+      try {
+        Util.deleteFolder(targetFolderPath);
+        explainFolder = Util.createFolder(parentFolderPath + "/" + job + "_" + db);
+        System.out.println("job is " + job + ", mkdir " + targetFolderPath + " success");
+      } catch (Exception e) {
+        System.out.println(
+            "job is " + job + ", mkdir " + targetFolderPath + " failed, error: " + e.getMessage());
+        System.exit(1);
+      }
     }
 
-    File folder = new File(source.getFolderPath());
-    File[] files = folder.listFiles();
-    Arrays.sort(Objects.requireNonNull(files), new CompareByNo());
+    for (File f : Objects.requireNonNull(queryFiles)) {
 
-    StringBuffer sql = new StringBuffer();
-    for (File f : Objects.requireNonNull(files)) {
+      if (shouldSkipQuery(f)) continue;
 
-      if (f.getName().contains("38") && (!"explain".equals(t))) {
-        System.out.println("query_38.sql | issue: https://github.com/pingcap/tidb/issues/27745");
-        continue;
-      }
-
-      try (Stream<String> ls = Files.lines(Paths.get(f.getAbsolutePath()))) {
-        ls.forEach(
-            s -> {
-              if (!s.startsWith("--")) {
-                sql.append(s).append(" \n");
-              }
-            });
+      try (Stream<String> l = Files.lines(Paths.get(f.getAbsolutePath()))) {
+        l.forEach(s -> sql.append(s).append(" \n"));
       } catch (Exception e) {
         System.out.println(f.getName() + "|" + " load failed: " + e.getMessage());
         continue;
       }
 
-      long startTime;
       try {
 
         System.out.print(f.getName());
-        startTime = System.currentTimeMillis();
-        switch (t) {
-          case "explain":
-            sql.insert(0, "explain ");
-            break;
-          case "explain_analyze":
-            sql.insert(0, "explain analyze ");
-            break;
+        if ("explain".equals(job)) {
+          sql.insert(0, "explain ");
+        } else if ("explain_analyze".equals(job)) {
+          sql.insert(0, "explain analyze ");
         }
 
+        long startTime = System.currentTimeMillis();
         rs = sm.executeQuery(sql.toString());
-
         double duration = Util.mills2Second(startTime);
-        if ("tidb".equals(t)) {
+        success++;
+
+        if ("tidb".equals(job)) {
           System.out.print(" | " + duration + "s | ");
         } else {
           System.out.println(" | " + duration + "s | ");
         }
+
         totalDuration += duration;
-        success++;
 
         File file;
-        switch (t) {
+        switch (job) {
           case "tidb":
             int rows = 0;
             while (rs.next()) {
@@ -108,7 +121,10 @@ public class TiDB implements Run {
             Explain e = new Explain();
             file =
                 new File(
-                    explainFolder.getAbsolutePath() + "/" + f.getName() + "_" + duration + ".sql");
+                    Objects.requireNonNull(explainFolder).getAbsolutePath()
+                        + "/"
+                        + f.getName()
+                        + ".sql");
             FileUtils.write(file, sql.append("\n"), "utf-8");
             FileUtils.write(file, e.explainTable(rs), "utf-8");
             break;
@@ -116,7 +132,12 @@ public class TiDB implements Run {
             ExplainAnalyze ea = new ExplainAnalyze();
             file =
                 new File(
-                    explainFolder.getAbsolutePath() + "/" + f.getName() + "_" + duration + ".sql");
+                    Objects.requireNonNull(explainFolder).getAbsolutePath()
+                        + "/"
+                        + f.getName()
+                        + "_"
+                        + duration
+                        + ".sql");
             FileUtils.write(file, sql.append("\n"), "utf-8");
             FileUtils.write(file, ea.explainAnalyzeTable(rs), "utf-8");
             break;
@@ -125,8 +146,8 @@ public class TiDB implements Run {
       } catch (Exception e) {
         if (e.getMessage().contains("Communications link failure")) {
           System.out.println(" | Communications link failure");
-          executeVariables(sm, source);
-          Thread.sleep(30000);
+          setVariables();
+          Thread.sleep(5000);
         } else {
           System.out.println(" | " + e.getMessage());
         }
@@ -134,7 +155,7 @@ public class TiDB implements Run {
             && !e.getMessage().contains("Communications link failure")) {
           Thread.sleep(60000);
         }
-        errors.add(f.getName());
+        failedQueries.add(f.getName());
         failed++;
       }
       sql.delete(0, sql.length());
@@ -149,21 +170,38 @@ public class TiDB implements Run {
     System.out.println(
         "total duration:" + totalDuration + "s | success: " + success + " | failed:" + failed);
     System.out.println("failed queries: ");
-    for (String error : errors) {
-      System.out.println(error);
+    for (String query : failedQueries) {
+      System.out.println(query);
     }
   }
 
   @SneakyThrows
-  public static void executeVariables(Statement sm, Source source) {
-    String[] variables = source.getVariables().split(";");
-    for (String variable : variables) {
+  public void setVariables() {
+    for (String v : variables) {
       try {
-        sm.execute(variable);
+        sm.execute(v);
       } catch (Exception e) {
-        executeVariables(sm, source);
+        setVariables();
       }
     }
+  }
+
+  public static void skipQueries() {
+    skipQueries.put("38", "https://github.com/pingcap/tidb/issues/27745");
+  }
+
+  public static boolean isExplainAnalyze(String job) {
+    return "explain".equals(job) || "explain_analyze".equals(job);
+  }
+
+  public boolean shouldSkipQuery(File queryFile) {
+    for (Map.Entry<String, String> entry : skipQueries.entrySet()) {
+      if (queryFile.getName().contains(entry.getKey()) && (!"explain".equals(job))) {
+        System.out.println(queryFile.getName() + " | " + entry.getValue());
+        return true;
+      }
+    }
+    return false;
   }
 }
 
@@ -182,11 +220,11 @@ class Explain {
   @SneakyThrows
   public String explainTable(ResultSet rs) {
     while (rs.next()) {
-      this.id.append(rs.getString(1)).append("\n");
-      this.estRows.append(rs.getString(2)).append("\n");
-      this.task.append(rs.getString(3)).append("\n");
-      this.accessObject.append(rs.getString(4)).append("\n");
-      this.operatorInfo.append(rs.getString(5)).append("\n");
+      id.append(rs.getString(1)).append("\n");
+      estRows.append(rs.getString(2)).append("\n");
+      task.append(rs.getString(3)).append("\n");
+      accessObject.append(rs.getString(4)).append("\n");
+      operatorInfo.append(rs.getString(5)).append("\n");
     }
     rows[0][0] = id.toString();
     rows[0][1] = estRows.toString();
@@ -226,15 +264,15 @@ class ExplainAnalyze {
   @SneakyThrows
   public String explainAnalyzeTable(ResultSet rs) {
     while (rs.next()) {
-      this.id.append(rs.getString(1)).append("\n");
-      this.estRows.append(rs.getString(2)).append("\n");
-      this.actRows.append(rs.getString(3)).append("\n");
-      this.task.append(rs.getString(4)).append("\n");
-      this.accessObject.append(rs.getString(5)).append("\n");
-      this.executionInfo.append(rs.getString(6)).append("\n");
-      this.operatorInfo.append(rs.getString(7)).append("\n");
-      this.memory.append(rs.getString(8)).append("\n");
-      this.disk.append(rs.getString(9)).append("\n");
+      id.append(rs.getString(1)).append("\n");
+      estRows.append(rs.getString(2)).append("\n");
+      actRows.append(rs.getString(3)).append("\n");
+      task.append(rs.getString(4)).append("\n");
+      accessObject.append(rs.getString(5)).append("\n");
+      executionInfo.append(rs.getString(6)).append("\n");
+      operatorInfo.append(rs.getString(7)).append("\n");
+      memory.append(rs.getString(8)).append("\n");
+      disk.append(rs.getString(9)).append("\n");
     }
     rows[0][0] = id.toString();
     rows[0][1] = estRows.toString();

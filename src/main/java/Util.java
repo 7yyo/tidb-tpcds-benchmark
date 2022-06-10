@@ -1,6 +1,8 @@
 import com.jakewharton.fliptables.FlipTable;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.Objects;
 
 public class Util {
 
@@ -35,5 +37,12 @@ public class Util {
     if (!deleteFolder.delete()) {
       System.out.println("delete folder " + deleteFolder.getAbsolutePath() + " failed");
     }
+  }
+
+  public static File[] sortFolder(String folderPath) {
+    File folder = new File(folderPath);
+    File[] files = folder.listFiles();
+    Arrays.sort(Objects.requireNonNull(files), new CompareByNo());
+    return files;
   }
 }
