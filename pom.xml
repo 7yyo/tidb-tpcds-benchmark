@@ -49,11 +49,20 @@
             <artifactId>commons-io</artifactId>
             <version>2.11.0</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/com.pingcap.tispark/tispark-core-internal -->
         <dependency>
-            <groupId>com.pingcap.tispark</groupId>
-            <artifactId>tispark-assembly-3.0</artifactId>
-            <version>2.5.1</version>
+            <groupId>net.time4j</groupId>
+            <artifactId>time4j-base</artifactId>
+            <version>5.8</version>
+        </dependency>
+        <dependency>
+            <groupId>net.time4j</groupId>
+            <artifactId>time4j-sqlxml</artifactId>
+            <version>5.8</version>
+        </dependency>
+        <dependency>
+            <groupId>net.time4j</groupId>
+            <artifactId>time4j-tzdata</artifactId>
+            <version>5.0-2020a</version>
         </dependency>
     </dependencies>
 
